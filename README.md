@@ -4,6 +4,8 @@
 ## This is my version of this library. At this point I'm not planning on merging changes back into the original library, as my goal is to just hack it together to work for me.
 ## That may change in the future or if there is interest.
 
+Followed this link to get working in WSL2: https://www.gregbrisebois.com/posts/chromedriver-in-wsl2/
+
 # Monarch Money Amazon Connector (MMAC)
 
 Monarch Money Amazon Connector automatically adds

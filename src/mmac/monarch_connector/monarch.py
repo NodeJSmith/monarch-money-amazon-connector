@@ -1,6 +1,7 @@
 import time
 from collections import Counter, defaultdict
 from datetime import datetime
+from functools import lru_cache
 
 from loguru import logger
 from monarchmoney import MonarchMoney
@@ -355,11 +356,8 @@ class MonarchConnector:
                 new_tags = list(set(previous_tag_ids))
 
                 if self._config.amazon_account_tag.enabled and order.account_email:
-                    tag_name = (
-                        f"{self._config.amazon_account_tag.prefix}{order.account_email}"
-                    )
-                    account_tag = await self._get_tag(
-                        name=tag_name,
+                    account_tag = await self._get_tag_for_account_email(
+                        account_email=order.account_email,
                         color=self._config.amazon_account_tag.color,
                     )
                     new_tags.append(account_tag)
@@ -374,3 +372,9 @@ class MonarchConnector:
         response = CategoriesResponse.model_validate(categories)
 
         return [c for c in response.categories if c.isDisabled is False]
+
+    @lru_cache
+    async def _get_tag_for_account_email(self, account_email: str, color: str) -> str:
+        tag_name = f"{self._config.amazon_account_tag.prefix}{account_email}"
+        account_tag = await self._get_tag(name=tag_name, color=color)
+        return account_tag

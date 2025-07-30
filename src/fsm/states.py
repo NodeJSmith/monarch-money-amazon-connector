@@ -26,7 +26,7 @@ class State(ABC):
                 state_machine.send("redirect_to_otp", amazon=amazon)
 
         except Exception as e:
-            logger.error(f"Error in state {self.__class__.__name__}: {e}")
+            logger.exception(f"Error in state {self.__class__.__name__}: {e}")
 
     @abstractmethod
     def _handle(

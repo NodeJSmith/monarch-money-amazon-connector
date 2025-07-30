@@ -18,6 +18,12 @@ class AmazonOrder(BaseModel):
     items: list[str]
     account_email: Optional[str] = None
 
+    def order_date_dt(self):
+        from datetime import datetime
+
+        # needs to match something like July 29, 2025
+        return datetime.strptime(self.order_date, "%B %d, %Y")
+
     def __str__(self):
         return f"Order: {self.order_date} for {self.total_cost} with {len(self.items)} items"
 

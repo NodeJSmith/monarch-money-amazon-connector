@@ -57,6 +57,11 @@ class Transaction(BaseModel):
     account: dict
     tags: list["TransactionTag"]
 
+    def trans_date_dt(self):
+        from datetime import datetime
+
+        return datetime.strptime(self.date, "%Y-%m-%d")
+
     def __str__(self):
         return f"Transaction: {self.plaidName} for {self.amount} on {self.date}"
 

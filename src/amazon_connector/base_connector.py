@@ -47,7 +47,8 @@ class BaseAmazonConnector(ABC):
         self.load_cookies()
 
     def __del__(self):
-        self.driver.quit()
+        if hasattr(self, "driver"):
+            self.driver.quit()
 
     @property
     def _config_directory(self) -> Path:

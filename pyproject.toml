@@ -35,6 +35,7 @@ dependencies = [
     "pydantic_settings",
     "python-statemachine",
     "pyotp>=2.9.0",
+    "async-lru>=2.0.5",
 ]
 
 [project.optional-dependencies]

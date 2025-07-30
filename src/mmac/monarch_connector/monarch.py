@@ -257,9 +257,10 @@ class MonarchConnector:
                 )
 
                 # Add Note
+                items_str = "\n".join(item_list)
                 await self.mm.update_transaction(
                     transaction_id=match.transaction.id,
-                    notes=f"Date: {order.order_date}\nAccount: {order.account_email}\nItems:\n{'\n'.join(item_list)}",
+                    notes=f"Date: {order.order_date}\nAccount: {order.account_email}\nItems:\n{items_str}",
                 )
 
                 # Add Tag

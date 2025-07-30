@@ -1,8 +1,8 @@
 import time
 from collections import Counter, defaultdict
-from datetime import datetime
-from functools import lru_cache
+from datetime import datetime, timedelta
 
+from async_lru import alru_cache
 from loguru import logger
 from monarchmoney import MonarchMoney
 from tenacity import retry, stop_after_attempt, wait_random_exponential
@@ -373,7 +373,7 @@ class MonarchConnector:
 
         return [c for c in response.categories if c.isDisabled is False]
 
-    @lru_cache
+    @alru_cache
     async def _get_tag_for_account_email(self, account_email: str, color: str) -> str:
         tag_name = f"{self._config.amazon_account_tag.prefix}{account_email}"
         account_tag = await self._get_tag(name=tag_name, color=color)

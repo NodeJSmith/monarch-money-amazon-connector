@@ -101,7 +101,7 @@ class MonarchConnector:
         return filtered_transactions
 
     async def match_transactions_to_amazon(
-        self, amazon_orders: AmazonOrderData
+        self, amazon_orders: AmazonOrderData, transactions: list[Transaction]
     ) -> list[TransactionAmazonMapping]:
         """Match the transactions that need review to the Amazon orders.
 
@@ -110,7 +110,9 @@ class MonarchConnector:
         - total_cost
         - items
         """
-        transactions = await self.get_transactions_need_review()
+        if not amazon_orders.orders:
+            logger.warning("No Amazon orders found to match with transactions.")
+            return []
 
         validated_orders = [
             AmazonOrder.model_validate(o.model_dump()) for o in amazon_orders.orders

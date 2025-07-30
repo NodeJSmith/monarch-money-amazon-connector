@@ -2,6 +2,7 @@ from loguru import logger
 from monarchmoney import MonarchMoney
 
 from mmac.amazon_connector.amazon_order_connector import AmazonOrderConnector
+from mmac.amazon_connector.types import AmazonOrderData
 from mmac.captcha_solver.llm_captcha_solver import LLMCaptchaSolver
 from mmac.config.types import AmazonAccount, Config
 from mmac.fsm.state_machine_implementation import OrderScraperFSM
@@ -15,6 +16,7 @@ class MonarchMoneyAmazonConnectorCLI:
         self._captcha_solver = None
 
         self._fsm = OrderScraperFSM()
+        self._orders: AmazonOrderData = None  # type: ignore
 
         if self._config.llm.enable_llm_captcha_solver:
             self._captcha_solver = LLMCaptchaSolver(
@@ -39,14 +41,13 @@ class MonarchMoneyAmazonConnectorCLI:
 
         return self._mm
 
-    async def _annotate_single_account(
-        self, account: AmazonAccount, monarch_connector: MonarchConnector
-    ):
-        logger.info(f"Annotating transactions found in Amazon Account: {account.email}")
-
+    async def _get_amazon_connector(
+        self, account: AmazonAccount
+    ) -> AmazonOrderConnector:
         connector = AmazonOrderConnector(
             username=account.email,
             password=account.password,
+            mfa_secret_key=account.mfa_secret_key,
             headless=self._config.headless,
             pause_between_navigation=self._config.debug.pause_between_navigation,
             captcha_solver=self._captcha_solver,
@@ -61,27 +62,36 @@ class MonarchMoneyAmazonConnectorCLI:
         self._fsm.send("stay_on_login", amazon=connector)
 
         if self._fsm.orders is None:
-            logger.error(
+            raise Exception(
                 f"Failed to retrieve orders for Amazon account: {account.email}"
             )
-            return
+        else:
+            self._orders = self._fsm.orders
 
-        orders = self._fsm.orders
+        return connector
+
+    async def _annotate_single_account(
+        self,
+        amazon_connector: AmazonOrderConnector,
+        monarch_connector: MonarchConnector,
+    ):
+        username = amazon_connector._username
+
+        logger.info(f"Annotating transactions found in Amazon Account: {username}")
 
         logger.debug(
-            f"Found {len(orders.orders)} orders for Amazon account: {account.email}"
+            f"Found {len(self._orders.orders)} orders for Amazon account: {username}"
         )
 
         logger.debug(
-            f"Matching transactions to Amazon orders for Amazon account: {account.email}"
+            f"Matching transactions to Amazon orders for Amazon account: {username}"
         )
+        transactions = await monarch_connector.get_transactions_need_review()
         transaction_mapping = await monarch_connector.match_transactions_to_amazon(
-            orders
+            self._orders, transactions=transactions
         )
 
-        logger.debug(
-            f"Adding notes to Amazon orders for Amazon account: {account.email}"
-        )
+        logger.debug(f"Adding notes to Amazon orders for Amazon account: {username}")
         await monarch_connector.add_notes_to_amazon_orders(matches=transaction_mapping)
 
     async def annotate_transactions(self):
@@ -103,6 +113,7 @@ class MonarchMoneyAmazonConnectorCLI:
             await monarch_connector.validate_session()
 
         for account in self._config.amazon_accounts:
+            amzn_conn = await self._get_amazon_connector(account=account)
             await self._annotate_single_account(
-                account=account, monarch_connector=monarch_connector
+                amazon_connector=amzn_conn, monarch_connector=monarch_connector
             )

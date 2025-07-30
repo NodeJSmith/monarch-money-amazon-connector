@@ -1,22 +1,22 @@
 import time
-from monarchmoney import MonarchMoney
 
-from .exceptions import TagAlreadyExistsException
+from loguru import logger
+from monarchmoney import MonarchMoney
 from tenacity import retry, stop_after_attempt, wait_random_exponential
-from ..config.types import Config
-from .api_types import (
+
+from mmac.amazon_connector.types import AmazonOrderData
+from mmac.config.types import Config
+from mmac.monarch_connector.api_types import (
     CategoriesResponse,
     CategoryDetails,
     CreateTransactionTagResponse,
-    TransactionResponse,
     Transaction,
+    TransactionResponse,
     TransactionTag,
     TransactionTagResponse,
 )
-from .connector_types import AmazonOrder, TransactionAmazonMapping
-from loguru import logger
-
-from ..amazon_connector.types import AmazonOrderData
+from mmac.monarch_connector.connector_types import AmazonOrder, TransactionAmazonMapping
+from mmac.monarch_connector.exceptions import TagAlreadyExistsException
 
 
 class MonarchConnector:

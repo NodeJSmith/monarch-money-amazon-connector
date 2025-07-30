@@ -37,4 +37,3 @@
 ### Bug Fixes
 
 * **ci:** Attempt to run pypi publish on release `released`. ([189a272](https://github.com/elsell/monarch-money-amazon-connector/commit/189a27246848013dc0ae7c1646196aeb48fd2239))
-

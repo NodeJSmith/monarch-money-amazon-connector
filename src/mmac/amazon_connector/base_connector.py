@@ -211,6 +211,10 @@ class BaseAmazonConnector(ABC):
             logger.warning(
                 f"Failed to navigate to {url}. Instead, navigated to {self.driver.current_url}"
             )
+            if "signin" in self.driver.current_url and not calling_from_login:
+                raise Exception(
+                    "Failed to navigate to the expected page. You might need to login again."
+                )
             # raise Exception(
             #     f"Failed to navigate to {url}. Instead, navigated to {self.driver.current_url}"
             # )

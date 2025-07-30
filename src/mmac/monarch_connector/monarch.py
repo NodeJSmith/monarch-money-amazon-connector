@@ -25,6 +25,15 @@ class MonarchConnector:
 
         self._config = config
 
+    async def validate_session(self):
+        """Validates the Monarch Money session by attempting to retrieve accounts."""
+        try:
+            await self.mm.get_accounts()
+            logger.info("Monarch Money session is valid.")
+        except Exception as e:
+            logger.error(f"Monarch Money session validation failed: {e}")
+            raise e
+
     async def get_transactions(self) -> TransactionResponse:
         @retry(
             stop=stop_after_attempt(15),

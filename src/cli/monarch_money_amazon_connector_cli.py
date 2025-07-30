@@ -37,6 +37,7 @@ class MonarchMoneyAmazonConnectorCLI:
             await self._mm.login(
                 email=self._config.monarch_account.email,
                 password=self._config.monarch_account.password,
+                mfa_secret_key=self._config.monarch_account.mfa_secret_key,
             )
 
         return self._mm

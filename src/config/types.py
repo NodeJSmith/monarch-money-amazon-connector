@@ -19,6 +19,7 @@ class AmazonAccount(BaseModel):
 class MonarchAccount(BaseModel):
     email: str
     password: str
+    mfa_secret_key: Optional[str] = None  # Optional MFA secret key for Monarch account
 
 
 class TransactionTag(BaseModel):

@@ -25,21 +25,17 @@ class MonarchMoneyAmazonConnectorCLI:
                 organization=self._config.llm.organization,
             )
 
-    async def _get_monarch_money(self) -> MonarchMoney:
+    async def _get_monarch_money(self, use_saved_session: bool = True) -> MonarchMoney:
         self._mm = MonarchMoney()
-        try:
-            self._mm.load_session()
-            logger.info("Monarch Money session found. Using existing session.")
-        except FileNotFoundError:
-            logger.info("No Monarch Money session found. Logging in.")
-            logger.debug(
-                f"Logging in with email: {self._config.monarch_account.email}, password: '{self._config.monarch_account.password}'"
-            )
-            await self._mm.login(
-                email=self._config.monarch_account.email,
-                password=self._config.monarch_account.password,
-                mfa_secret_key=self._config.monarch_account.mfa_secret_key,
-            )
+
+        logger.info("No Monarch Money session found. Logging in.")
+        logger.debug(f"Logging in with email: {self._config.monarch_account.email}")
+        await self._mm.login(
+            email=self._config.monarch_account.email,
+            password=self._config.monarch_account.password,
+            mfa_secret_key=self._config.monarch_account.mfa_secret_key,
+            use_saved_session=use_saved_session,
+        )
 
         return self._mm
 
@@ -97,7 +93,14 @@ class MonarchMoneyAmazonConnectorCLI:
             monarch_money=await self._get_monarch_money(), config=self._config
         )
 
-        await monarch_connector.validate_session()
+        try:
+            await monarch_connector.validate_session()
+        except Exception:
+            monarch_connector = MonarchConnector(
+                monarch_money=await self._get_monarch_money(use_saved_session=False),
+                config=self._config,
+            )
+            await monarch_connector.validate_session()
 
         for account in self._config.amazon_accounts:
             await self._annotate_single_account(

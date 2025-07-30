@@ -717,12 +717,6 @@ test = [
     { name = "pytest-asyncio" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "loguru" },
@@ -747,10 +741,7 @@ requires-dist = [
 provides-extras = ["build", "test", "dev"]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.4.1" },
-    { name = "pytest-asyncio", specifier = ">=1.1.0" },
-]
+dev = []
 
 [[package]]
 name = "monarchmoney"

@@ -18,12 +18,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-import toml
-from .config.types import Config
-from .cli import MonarchMoneyAmazonConnectorCLI
-from asyncio import run
-from loguru import logger
 import sys
+from asyncio import run
+
+import toml
+from loguru import logger
+
+from mmac.cli import MonarchMoneyAmazonConnectorCLI
+from mmac.config.types import Config
 
 logger.remove()
 logger.add(

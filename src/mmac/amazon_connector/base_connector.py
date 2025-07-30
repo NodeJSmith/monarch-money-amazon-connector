@@ -1,17 +1,20 @@
-from abc import ABC
-from typing import Literal, Optional
-from selenium import webdriver
-from selenium.common.exceptions import InvalidCookieDomainException
-from selenium.webdriver.common.by import By
 import pickle
 import time
-from selenium.common.exceptions import NoSuchElementException
+from abc import ABC
 from pathlib import Path
-from loguru import logger
+from typing import Literal, Optional
 
-from ..monarch_connector.exceptions import CaptchaException
-from ..config.types import AmazonFilter
-from ..captcha_solver.abstract_captcha_solver import AbstractCaptchaSolver
+from loguru import logger
+from selenium import webdriver
+from selenium.common.exceptions import (
+    InvalidCookieDomainException,
+    NoSuchElementException,
+)
+from selenium.webdriver.common.by import By
+
+from mmac.captcha_solver.abstract_captcha_solver import AbstractCaptchaSolver
+from mmac.config.types import AmazonFilter
+from mmac.monarch_connector.exceptions import CaptchaException
 
 
 class BaseAmazonConnector(ABC):
@@ -104,9 +107,9 @@ class BaseAmazonConnector(ABC):
         Path(self._firefox_profile_directory).mkdir(parents=True, exist_ok=True)
 
     def _get_firefox_driver(self):
-        from selenium.webdriver.firefox.service import Service
-        from selenium.webdriver.firefox.options import Options
         from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+        from selenium.webdriver.firefox.options import Options
+        from selenium.webdriver.firefox.service import Service
         from webdriver_manager.firefox import GeckoDriverManager
 
         options = Options()
@@ -121,8 +124,8 @@ class BaseAmazonConnector(ABC):
         return driver
 
     def _get_chrome_driver(self):
-        from selenium.webdriver.chrome.service import Service
         from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.chrome.service import Service
         from webdriver_manager.chrome import ChromeDriverManager
 
         options = Options()

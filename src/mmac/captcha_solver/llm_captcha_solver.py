@@ -1,7 +1,9 @@
 from typing import Optional
+
 import openai
-from .abstract_captcha_solver import AbstractCaptchaSolver
 from pydantic import BaseModel
+
+from mmac.captcha_solver.abstract_captcha_solver import AbstractCaptchaSolver
 
 
 class LLMCaptchaOutput(BaseModel):

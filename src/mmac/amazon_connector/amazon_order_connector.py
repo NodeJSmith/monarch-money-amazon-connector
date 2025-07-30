@@ -1,10 +1,11 @@
 import time
+
+from loguru import logger
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 
-from selenium.common.exceptions import NoSuchElementException
-from .types import AmazonOrderItem, AmazonOrderData
-from .base_connector import BaseAmazonConnector
-from loguru import logger
+from mmac.amazon_connector.base_connector import BaseAmazonConnector
+from mmac.amazon_connector.types import AmazonOrderData, AmazonOrderItem
 
 
 class AmazonOrderConnector(BaseAmazonConnector):

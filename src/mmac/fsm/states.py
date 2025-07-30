@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Any
-from loguru import logger
 
-from ..monarch_connector.exceptions import CaptchaException, OTPException
-from ..amazon_connector.amazon_order_connector import AmazonOrderConnector
+from loguru import logger
 from statemachine import StateMachine
+
+from mmac.amazon_connector.amazon_order_connector import AmazonOrderConnector
+from mmac.monarch_connector.exceptions import CaptchaException, OTPException
 
 
 class State(ABC):

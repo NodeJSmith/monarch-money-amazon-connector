@@ -1,10 +1,11 @@
-from ..config.types import AmazonAccount, Config
 from loguru import logger
-from ..amazon_connector.amazon_order_connector import AmazonOrderConnector
-from ..monarch_connector.monarch import MonarchConnector
 from monarchmoney import MonarchMoney
-from ..captcha_solver.llm_captcha_solver import LLMCaptchaSolver
-from ..fsm.state_machine_implementation import OrderScraperFSM
+
+from mmac.amazon_connector.amazon_order_connector import AmazonOrderConnector
+from mmac.captcha_solver.llm_captcha_solver import LLMCaptchaSolver
+from mmac.config.types import AmazonAccount, Config
+from mmac.fsm.state_machine_implementation import OrderScraperFSM
+from mmac.monarch_connector.monarch import MonarchConnector
 
 
 class MonarchMoneyAmazonConnectorCLI:

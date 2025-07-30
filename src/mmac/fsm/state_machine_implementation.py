@@ -1,12 +1,18 @@
+from enum import Enum
 from typing import Optional
 
-from ..amazon_connector.types import AmazonOrderData
-from ..amazon_connector.amazon_order_connector import AmazonOrderConnector
-from .states import LoginPageState, CaptchaPageState, OTPPageState, OrdersPageState
-from .states import State as FSMState
-from statemachine import State, StateMachine
 from loguru import logger
-from enum import Enum
+from statemachine import State, StateMachine
+
+from mmac.amazon_connector.amazon_order_connector import AmazonOrderConnector
+from mmac.amazon_connector.types import AmazonOrderData
+from mmac.fsm.states import (
+    CaptchaPageState,
+    LoginPageState,
+    OrdersPageState,
+    OTPPageState,
+)
+from mmac.fsm.states import State as FSMState
 
 
 class StateName(Enum):

@@ -1,6 +1,8 @@
 from typing import Optional
+
 from pydantic import BaseModel
-from .api_types import Transaction
+
+from mmac.monarch_connector.api_types import Transaction
 
 
 # We choose to effectively redefine AmazonOrderData here because

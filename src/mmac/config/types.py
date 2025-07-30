@@ -1,10 +1,11 @@
+from typing import Optional, Type
+
 from pydantic import BaseModel
 from pydantic_settings import (
     BaseSettings,
-    SettingsConfigDict,
     PydanticBaseSettingsSource,
+    SettingsConfigDict,
 )
-from typing import Optional, Type
 
 
 class AmazonFilter(BaseModel):

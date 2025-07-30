@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from async_lru import alru_cache
+from gql import gql
 from loguru import logger
 from monarchmoney import MonarchMoney
-from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from mmac.amazon_connector.types import AmazonOrderData
 from mmac.config.types import Config
@@ -39,18 +39,19 @@ class MonarchConnector:
             raise e
 
     async def get_transactions(self) -> TransactionResponse:
-        @retry(
-            stop=stop_after_attempt(15),
-            wait=wait_random_exponential(multiplier=1, max=60),
-        )
         async def get_transactions_safe(
-            start_date: str, end_date: str
+            start_date: str, end_date: str, amazon_merchant_id: str | None = None
         ) -> dict[str, Any]:
-            return await self.mm.get_transactions(
+            return await self.get_amazon_transactions(
                 start_date=start_date,
                 end_date=end_date,
                 limit=1500,
+                amazon_merchant_id=amazon_merchant_id,
             )
+
+        filters = await self.get_filters()
+        merchants = filters["merchants"]
+        amazon = next((m for m in merchants if m["name"].lower() == "amazon"), None)
 
         if self._config.amazon_filter.year is None:
             logger.warning(
@@ -73,6 +74,7 @@ class MonarchConnector:
             resp = await get_transactions_safe(
                 start_date=curr_start_date.strftime("%Y-%m-%d"),
                 end_date=curr_end_date.strftime("%Y-%m-%d"),
+                amazon_merchant_id=amazon["id"] if amazon else None,
             )
             results.extend(resp["allTransactions"]["results"])
 
@@ -412,3 +414,259 @@ class MonarchConnector:
         tag_name = f"{self._config.amazon_account_tag.prefix}{account_email}"
         account_tag = await self._get_tag(name=tag_name, color=color)
         return account_tag
+
+    async def get_filters(self):
+        async def mm_get_filters(self):
+            query = gql(
+                """
+            query Web_TransactionsFilterQuery($search: String, $includeIds: [ID!]) {
+            categoryGroups {
+                id
+                name
+                order
+                categories {
+                id
+                name
+                icon
+                order
+                __typename
+                }
+                __typename
+            }
+            goalsV2 {
+                id
+                name
+                imageStorageProvider
+                imageStorageProviderId
+                archivedAt
+                priority
+                __typename
+            }
+            merchants(search: $search, includeIds: $includeIds) {
+                id
+                name
+                transactionCount
+                logoUrl
+                __typename
+            }
+            accounts {
+                id
+                displayName
+                logoUrl
+                icon
+                type {
+                name
+                display
+                __typename
+                }
+                __typename
+            }
+            householdTransactionTags {
+                id
+                name
+                order
+                color
+                __typename
+            }
+            myHousehold {
+                id
+                users {
+                id
+                name
+                __typename
+                }
+                __typename
+            }
+            householdPreferences {
+                accountGroupOrder
+                __typename
+            }
+            }
+
+                """
+            )
+
+            variables = {}
+
+            return await self.gql_call(
+                operation="Web_TransactionsFilterQuery",
+                graphql_query=query,
+                variables=variables,
+            )
+
+        return await mm_get_filters(self.mm)
+
+    async def get_amazon_transactions(
+        self,
+        start_date: str,
+        end_date: str,
+        limit: int = 1500,
+        amazon_merchant_id: str | None = None,
+    ) -> dict[str, Any]:
+        async def mm_get_transactions(
+            self,
+            limit: int = 50,
+            offset: int | None = 0,
+            start_date: str | None = None,
+            end_date: str | None = None,
+            search: str = "",
+            category_ids: list[str] = [],
+            account_ids: list[str] = [],
+            tag_ids: list[str] = [],
+            has_attachments: bool | None = None,
+            has_notes: bool | None = None,
+            hidden_from_reports: bool | None = None,
+            is_split: bool | None = None,
+            is_recurring: bool | None = None,
+            imported_from_mint: bool | None = None,
+            synced_from_institution: bool | None = None,
+            merchants: list[str] | None = None,
+        ) -> dict[str, Any]:
+            """
+            Gets transaction data from the account.
+
+            :param limit: the maximum number of transactions to download, defaults to DEFAULT_RECORD_LIMIT.
+            :param offset: the number of transactions to skip (offset) before retrieving results.
+            :param start_date: the earliest date to get transactions from, in "yyyy-mm-dd" format.
+            :param end_date: the latest date to get transactions from, in "yyyy-mm-dd" format.
+            :param search: a string to filter transactions. use empty string for all results.
+            :param category_ids: a list of category ids to filter.
+            :param account_ids: a list of account ids to filter.
+            :param tag_ids: a list of tag ids to filter.
+            :param has_attachments: a bool to filter for whether the transactions have attachments.
+            :param has_notes: a bool to filter for whether the transactions have notes.
+            :param hidden_from_reports: a bool to filter for whether the transactions are hidden from reports.
+            :param is_split: a bool to filter for whether the transactions are split.
+            :param is_recurring: a bool to filter for whether the transactions are recurring.
+            :param imported_from_mint: a bool to filter for whether the transactions were imported from mint.
+            :param synced_from_institution: a bool to filter for whether the transactions were synced from an institution.
+            :param merchants: a list of merchant names to filter.
+            """
+
+            query = gql(
+                """
+            query GetTransactionsList($offset: Int, $limit: Int, $filters: TransactionFilterInput, $orderBy: TransactionOrdering) {
+                allTransactions(filters: $filters) {
+                totalCount
+                results(offset: $offset, limit: $limit, orderBy: $orderBy) {
+                    id
+                    ...TransactionOverviewFields
+                    __typename
+                }
+                __typename
+                }
+                transactionRules {
+                id
+                __typename
+                }
+            }
+
+            fragment TransactionOverviewFields on Transaction {
+                id
+                amount
+                pending
+                date
+                hideFromReports
+                plaidName
+                notes
+                isRecurring
+                reviewStatus
+                needsReview
+                attachments {
+                id
+                extension
+                filename
+                originalAssetUrl
+                publicId
+                sizeBytes
+                __typename
+                }
+                isSplitTransaction
+                createdAt
+                updatedAt
+                category {
+                id
+                name
+                __typename
+                }
+                merchant {
+                name
+                id
+                transactionsCount
+                __typename
+                }
+                account {
+                id
+                displayName
+                __typename
+                }
+                tags {
+                id
+                name
+                color
+                order
+                __typename
+                }
+                __typename
+            }
+            """
+            )
+
+            variables = {
+                "offset": offset,
+                "limit": limit,
+                "orderBy": "date",
+                "filters": {
+                    "search": search,
+                    "categories": category_ids,
+                    "accounts": account_ids,
+                    "tags": tag_ids,
+                    "merchants": merchants,
+                },
+            }
+
+            # If bool filters are not defined (i.e. None), then it should not apply the filter
+            if has_attachments is not None:
+                variables["filters"]["hasAttachments"] = has_attachments
+
+            if has_notes is not None:
+                variables["filters"]["hasNotes"] = has_notes
+
+            if hidden_from_reports is not None:
+                variables["filters"]["hideFromReports"] = hidden_from_reports
+
+            if is_recurring is not None:
+                variables["filters"]["isRecurring"] = is_recurring
+
+            if is_split is not None:
+                variables["filters"]["isSplit"] = is_split
+
+            if imported_from_mint is not None:
+                variables["filters"]["importedFromMint"] = imported_from_mint
+
+            if synced_from_institution is not None:
+                variables["filters"]["syncedFromInstitution"] = synced_from_institution
+
+            if start_date and end_date:
+                variables["filters"]["startDate"] = start_date
+                variables["filters"]["endDate"] = end_date
+            elif bool(start_date) != bool(end_date):
+                raise Exception(
+                    "You must specify both a startDate and endDate, not just one of them."
+                )
+
+            return await self.gql_call(
+                operation="GetTransactionsList",
+                graphql_query=query,
+                variables=variables,
+            )
+
+        merchants = [amazon_merchant_id] if amazon_merchant_id else []
+
+        return await mm_get_transactions(
+            self.mm,
+            limit=limit,
+            start_date=start_date,
+            end_date=end_date,
+            merchants=merchants,
+        )

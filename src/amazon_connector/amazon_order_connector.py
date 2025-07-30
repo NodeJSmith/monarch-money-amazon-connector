@@ -73,22 +73,26 @@ class AmazonOrderConnector(BaseAmazonConnector):
         try:
             all_cards = self.driver.find_elements(By.CSS_SELECTOR, ".order-card")
             for order_card in all_cards:
-                order_info: AmazonOrderItem = AmazonOrderItem()
+                try:
+                    order_info: AmazonOrderItem = AmazonOrderItem()
 
-                order_date = order_card.find_elements(By.CSS_SELECTOR, ".a-size-base")[
-                    0
-                ].text
-                total_cost = order_card.find_elements(By.CSS_SELECTOR, ".a-size-base")[
-                    1
-                ].text
-                items = order_card.find_elements(
-                    By.CSS_SELECTOR, ".yohtmlc-product-title"
-                )
-                order_info.order_date = order_date
-                order_info.total_cost = total_cost
-                order_info.items = [item.text for item in items]
+                    order_date = order_card.find_elements(
+                        By.CSS_SELECTOR, ".a-size-base"
+                    )[0].text
+                    total_cost = order_card.find_elements(
+                        By.CSS_SELECTOR, ".a-size-base"
+                    )[1].text
+                    items = order_card.find_elements(
+                        By.CSS_SELECTOR, ".yohtmlc-product-title"
+                    )
+                    order_info.order_date = order_date
+                    order_info.total_cost = total_cost
+                    order_info.items = [item.text for item in items]
 
-                orders.orders.append(order_info)
+                    orders.orders.append(order_info)
+                except Exception:
+                    logger.exception("Failed to parse order card")
+                    continue
 
         except NoSuchElementException as e:
             logger.error(f"An error occurred: {e}")

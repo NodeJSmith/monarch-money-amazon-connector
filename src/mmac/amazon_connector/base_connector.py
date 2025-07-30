@@ -1,9 +1,11 @@
+import binascii
 import pickle
 import time
 from abc import ABC
 from pathlib import Path
 from typing import Literal, Optional
 
+import pyotp
 from loguru import logger
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -24,6 +26,7 @@ class BaseAmazonConnector(ABC):
         self,
         username: str,
         password: str,
+        mfa_secret_key: str | None = None,
         browser: Literal["firefox"] | Literal["chrome"] = "chrome",
         headless: bool = True,
         pause_between_navigation: bool = False,
@@ -32,6 +35,7 @@ class BaseAmazonConnector(ABC):
     ):
         self._username = username
         self._password = password
+        self._mfa_secret_key = mfa_secret_key
 
         self._headless = headless
 
@@ -238,13 +242,38 @@ class BaseAmazonConnector(ABC):
 
         logger.info("OTP Code required.")
 
-        otp_code = input("Please enter a OTP Code: ")
+        if self._mfa_secret_key:
+            logger.debug("Using MFA secret key to generate OTP code.")
+            otp_code = self.get_otp_code_from_mfa_key()
+            logger.debug(f"Generated OTP code: {otp_code}")
+        else:
+            otp_code = input("Please enter a OTP Code: ")
 
         otp_input.send_keys(otp_code)
         remember_device_button.click()
         time.sleep(1)
         otp_continue_button.click()
         time.sleep(3)  # Wait for the page to load
+
+    def get_otp_code_from_mfa_key(self):
+        assert self._mfa_secret_key is not None, "MFA secret key is not set."
+        try:
+            totp = pyotp.TOTP(self._mfa_secret_key)
+            otp_code = totp.now()
+            logger.debug(f"Generated OTP code: {otp_code}")
+            return otp_code
+        except binascii.Error:
+            base64_secret_key = (
+                binascii.b2a_base64(
+                    binascii.a2b_base64(self._mfa_secret_key.encode("utf-8"))
+                )
+                .decode("utf-8")
+                .strip()
+            )
+            totp = pyotp.TOTP(base64_secret_key)
+            otp_code = totp.now()
+            logger.debug(f"Generated OTP code from base64 secret key: {otp_code}")
+            return otp_code
 
     def _get_logged_in_user_email(self):
         return self._username

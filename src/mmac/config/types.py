@@ -15,6 +15,7 @@ class AmazonFilter(BaseModel):
 class AmazonAccount(BaseModel):
     email: str
     password: str
+    mfa_secret_key: Optional[str] = None  # Optional MFA secret key for Amazon account
 
 
 class MonarchAccount(BaseModel):

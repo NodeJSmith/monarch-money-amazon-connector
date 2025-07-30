@@ -1,6 +1,7 @@
 import time
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+from typing import Any
 
 from async_lru import alru_cache
 from loguru import logger
@@ -42,10 +43,43 @@ class MonarchConnector:
             stop=stop_after_attempt(15),
             wait=wait_random_exponential(multiplier=1, max=60),
         )
-        async def get_transactions_safe():
-            return await self.mm.get_transactions(limit=1500)
+        async def get_transactions_safe(
+            start_date: str, end_date: str
+        ) -> dict[str, Any]:
+            return await self.mm.get_transactions(
+                start_date=start_date,
+                end_date=end_date,
+                limit=1500,
+            )
 
-        return TransactionResponse.model_validate(await get_transactions_safe())
+        if self._config.amazon_filter.year is None:
+            logger.warning(
+                "No year specified in Amazon filter. Defaulting to current year."
+            )
+            self._config.amazon_filter.year = datetime.now().year  # noqa # type: ignore
+        start_date = datetime(int(self._config.amazon_filter.year), 1, 1)  # noqa # type: ignore
+        end_date = max(
+            datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
+            start_date,
+        )
+        results: list[dict] = []
+        for i in range(13):
+            curr_start_date = start_date.replace(month=start_date.month + i)
+            curr_end_date = curr_start_date.replace(
+                month=curr_start_date.month + 1, day=1
+            ) - timedelta(days=1)
+            if curr_start_date > end_date:
+                break
+            resp = await get_transactions_safe(
+                start_date=curr_start_date.strftime("%Y-%m-%d"),
+                end_date=curr_end_date.strftime("%Y-%m-%d"),
+            )
+            results.extend(resp["allTransactions"]["results"])
+
+        data = TransactionResponse.model_validate(
+            {"allTransactions": {"results": results}}
+        )
+        return data
 
     async def get_transactions_need_review(self) -> list[Transaction]:
         """Gets the transactions that need review, filtering out those that have the MMAC tag and don't ."""

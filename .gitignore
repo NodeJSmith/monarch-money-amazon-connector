@@ -10,3 +10,4 @@ dist/
 *.key
 __pycache__/
 .mmac
+.vscode/settings.json

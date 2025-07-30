@@ -1,4 +1,6 @@
 import time
+from collections import Counter, defaultdict
+from datetime import datetime
 
 from loguru import logger
 from monarchmoney import MonarchMoney
@@ -128,21 +130,35 @@ class MonarchConnector:
         matches: dict[str, TransactionAmazonMapping] = {}
 
         skipped_orders: list[Transaction] = []
+        transactions_by_amount: dict[
+            float, dict[datetime, list[Transaction]]
+        ] = defaultdict(lambda: defaultdict(list))
+        orders_by_amount: dict[float, dict[datetime, list[AmazonOrder]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
+
+        distinct_merchants = Counter()
 
         for transaction in transactions:
-            if transaction.amount > 0:
-                skipped_orders.append(transaction)
-            else:
-                transaction.amount = abs(transaction.amount)
+            distinct_merchants.update([transaction.merchant.name])
+            if transaction.merchant.name != "Amazon":
+                continue
+            transactions_by_amount[abs(transaction.amount)][
+                transaction.trans_date_dt()
+            ].append(transaction)  # append(transaction)
 
-            for order in validated_orders:
-                if transaction.amount == float(order.total_cost.replace("$", "")):
-                    if transaction.id not in matches:
-                        matches[transaction.id] = TransactionAmazonMapping(
-                            transaction=transaction, amazon_orders=[order]
-                        )
-                    else:
-                        matches[transaction.id].amazon_orders.append(order)
+        for order in validated_orders:
+            order_amount = abs(float(order.total_cost.replace("$", "")))
+            # orders_by_amount[order_amount].append(order)
+            orders_by_amount[order_amount][order.order_date_dt()].append(order)
+
+        intersecting_amounts = set(transactions_by_amount.keys()).intersection(
+            set(orders_by_amount.keys())
+        )
+
+        matches = self._match_orders(
+            intersecting_amounts, transactions_by_amount, orders_by_amount
+        )
 
         # Warn on skipped orders
         if skipped_orders:
@@ -160,6 +176,75 @@ class MonarchConnector:
         logger.info(f"Found {len(matches)} transactions to annotate.")
 
         return list(matches.values())
+
+    def _match_orders(
+        self,
+        intersecting_amounts: set[float],
+        transactions_by_amount: dict[float, dict[datetime, list[Transaction]]],
+        orders_by_amount: dict[float, dict[datetime, list[AmazonOrder]]],
+    ) -> dict[str, TransactionAmazonMapping]:
+        matches: dict[str, TransactionAmazonMapping] = {}
+        skipped_orders: list[Transaction] = []
+
+        for amt in intersecting_amounts:
+            transactions = transactions_by_amount[amt]
+            orders = orders_by_amount[amt]
+
+            if len(transactions) == 0 or len(orders) == 0:
+                continue
+
+            for trans_dt, transaction_list in transactions.items():
+                for transaction in transaction_list:
+                    if transaction.amount > 0:
+                        skipped_orders.append(transaction)
+                        continue
+
+                    if trans_dt in orders:
+                        orders_for_date = orders[trans_dt]
+                        if len(orders_for_date) > 1:
+                            logger.warning(
+                                f"Multiple orders found for transaction {transaction.id} on {trans_dt}"
+                            )
+                        if transaction.id not in matches:
+                            matches[transaction.id] = TransactionAmazonMapping(
+                                transaction=transaction, amazon_orders=orders_for_date
+                            )
+                        else:
+                            matches[transaction.id].amazon_orders.extend(
+                                orders_for_date
+                            )
+                        continue
+
+                    # date doesn't match exactly, find next closest date
+                    closest_order = None
+                    closest_date_diff = None
+
+                    for order_dt, order_list in orders.items():
+                        for order in order_list:
+                            date_diff = trans_dt - order_dt
+
+                            if (
+                                closest_date_diff is None
+                                or date_diff < closest_date_diff
+                            ):
+                                closest_date_diff = date_diff
+                                closest_order = order
+
+                    if closest_order:
+                        if transaction.id not in matches:
+                            matches[transaction.id] = TransactionAmazonMapping(
+                                transaction=transaction, amazon_orders=[closest_order]
+                            )
+                        else:
+                            matches[transaction.id].amazon_orders.append(closest_order)
+
+        # Warn on skipped orders
+        if skipped_orders:
+            logger.warning(
+                f"Skipped {len(skipped_orders)} orders that were: {[o.plaidName for o in skipped_orders]}"
+            )
+
+        return matches
 
     async def _get_transaction_tags(self) -> list[TransactionTag]:
         all_tags = TransactionTagResponse.model_validate(

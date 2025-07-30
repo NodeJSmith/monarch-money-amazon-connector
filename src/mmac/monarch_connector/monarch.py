@@ -57,8 +57,7 @@ class MonarchConnector:
         transactions_needing_review = [
             t
             for t in transactions.allTransactions.results
-            if t.reviewStatus == "needs_review"
-            and (mmac_tag_id not in [tag.id for tag in t.tags])
+            if (mmac_tag_id not in [tag.id for tag in t.tags])
         ]
 
         logger.trace(

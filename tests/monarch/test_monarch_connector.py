@@ -179,9 +179,9 @@ class TestGetTransactionsNeedReview:
             ] = await mock_connector.get_transactions_need_review()
 
             # Assertions
-            assert len(filtered_transactions) == len(expected_results[i]), (
-                f"Failed Test Case idx={i}. Actual != Expected ({filtered_transactions} != {expected_results[i]})"
-            )
+            assert (
+                len(filtered_transactions) == len(expected_results[i])
+            ), f"Failed Test Case idx={i}. Actual != Expected ({filtered_transactions} != {expected_results[i]})"
             for filtered, expected in zip(filtered_transactions, expected_results[i]):
                 assert filtered.id == expected.id
                 assert filtered.merchant.name == expected.merchant.name

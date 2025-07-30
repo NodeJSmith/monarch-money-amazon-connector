@@ -96,6 +96,8 @@ class MonarchMoneyAmazonConnectorCLI:
             monarch_money=await self._get_monarch_money(), config=self._config
         )
 
+        await monarch_connector.validate_session()
+
         for account in self._config.amazon_accounts:
             await self._annotate_single_account(
                 account=account, monarch_connector=monarch_connector

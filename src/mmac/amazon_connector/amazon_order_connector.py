@@ -76,19 +76,30 @@ class AmazonOrderConnector(BaseAmazonConnector):
             for order_card in all_cards:
                 try:
                     order_info: AmazonOrderItem = AmazonOrderItem()
-
-                    order_date = order_card.find_elements(
+                    a_size_base_elements = order_card.find_elements(
                         By.CSS_SELECTOR, ".a-size-base"
-                    )[0].text
-                    total_cost = order_card.find_elements(
-                        By.CSS_SELECTOR, ".a-size-base"
-                    )[1].text
+                    )
                     items = order_card.find_elements(
                         By.CSS_SELECTOR, ".yohtmlc-product-title"
                     )
+                    items_text = [item.text for item in items]
+                    if len(a_size_base_elements) < 2:
+                        found_values = [
+                            element.text for element in a_size_base_elements
+                        ]
+
+                        logger.warning(
+                            f"Order card does not have enough a-size-base elements for order date and total cost: {found_values}, items: {items_text}"
+                        )
+
+                        continue
+
+                    order_date = a_size_base_elements[0].text
+                    total_cost = a_size_base_elements[1].text
+
                     order_info.order_date = order_date
                     order_info.total_cost = total_cost
-                    order_info.items = [item.text for item in items]
+                    order_info.items = items_text
 
                     orders.orders.append(order_info)
                 except Exception:
